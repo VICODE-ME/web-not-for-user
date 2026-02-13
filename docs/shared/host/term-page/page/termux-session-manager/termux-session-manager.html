@@ -1,1 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+  <title>Termux Session Manager Pro · Realistic Terminal Simulation</title>
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: radial-gradient(circle at 10% 30%, #0b0e14, #03050a);
+      color: #e4f0fb;
+      font-family: 'Inter', sans-serif;
+      line-height: 1.6;
+      padding: 2rem 1.5rem;
+      min-height: 100vh;
+    }
+    .wrapper {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .hero {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    .hero h1 {
+      font-size: 2.6rem;
+      font-weight: 700;
+      background: linear-gradient(145deg, #c0f0ff, #9ad0ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 20px rgba(0,255,255,0.3);
+      letter-spacing: -0.5px;
+      margin-bottom: 0.5rem;
+    }
+    .hero .badge {
+      display: inline-block;
+      background: #1e3a3f;
+      color: #b3f0ff;
+      padding: 0.4rem 1.2rem;
+      border-radius: 40px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: 1px solid #3ab4cc;
+      box-shadow: 0 0 12px #00a8cc55;
+      backdrop-filter: blur(4px);
+      margin-bottom: 1rem;
+    }
+    .hero p {
+      font-size: 1.2rem;
+      color: #b6d8e6;
+      max-width: 700px;
+      margin: 0 auto;
+    }
 
+    .terminal-main {
+      background: #0e121c;
+      border-radius: 18px;
+      box-shadow: 0 20px 40px -10px rgba(0,0,0,0.8), 0 0 0 2px rgba(0,255,200,0.1);
+      padding: 1.8rem 2rem;
+      margin-bottom: 3.5rem;
+      border-left: 6px solid #3cc6d6;
+      transition: box-shadow 0.3s ease, border-left-color 0.3s ease;
+      animation: terminal-glow 4s infinite alternate;
+      cursor: pointer;
+    }
+    .terminal-main.focused {
+      border-left-color: #8affff;
+      box-shadow: 0 0 30px #0ff, 0 20px 40px -10px rgba(0,0,0,0.8);
+    }
+    @keyframes terminal-glow {
+      0% { box-shadow: 0 20px 40px -10px #000, 0 0 0 2px #3cc6d622; }
+      100% { box-shadow: 0 20px 50px -5px #0ff3, 0 0 0 3px #3cc6d688; }
+    }
+    .terminal-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 1.5rem;
+    }
+    .terminal-header span {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+    }
+    .red { background: #ff5f56; }
+    .yellow { background: #ffbd2e; }
+    .green { background: #27c93f; }
+    .terminal-title {
+      color: #2bfd00;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.9rem;
+      margin-left: 10px;
+      letter-spacing: 1px;
+    }
+
+    .terminal-screen {
+      background: #2d3139;
+      border-radius: 14px;
+      border: 1px solid #2b4a55;
+      box-shadow: inset 0 0 15px #00000070;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 1rem;
+      line-height: 1.6;
+      color: #eeb710;
+      padding: 1.5rem;
+      min-height: 600px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-y: auto;
+      max-height: 4000px;
+    }
+    .cursor {
+      display: inline-block;
+      width: 12px;
+      height: 1.4rem;
+      background: #84ffff;
+      vertical-align: middle;
+      margin-left: 6px;
+      animation: blink 1s step-end infinite;
+      box-shadow: 0 0 10px #0ff;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .focus-hint {
+      display: inline-block;
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: #6fbfbf;
+      background: #1a2a2a;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid #3f9f9f;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.8rem;
+      margin: 2.5rem 0 3rem;
+    }
+    .card {
+      background: rgba(18, 28, 36, 0.75);
+      backdrop-filter: blur(10px);
+      border: 1px solid #2a6a7a;
+      border-radius: 24px;
+      padding: 1.8rem 1.2rem;
+      transition: all 0.25s ease;
+      box-shadow: 0 8px 0 #0d2c30;
+      display: flex;
+      flex-direction: column;
+    }
+    .card:hover {
+      transform: translateY(-8px);
+      border-color: #3fe0e0;
+      box-shadow: 0 15px 30px -5px #00e0e055, 0 10px 0 #12686e;
+    }
+    .card-icon {
+      font-size: 2.2rem;
+      color: #5de0e6;
+      margin-bottom: 0.8rem;
+      text-shadow: 0 0 15px #0ff;
+    }
+    .card h3 {
+      font-size: 1.6rem;
+      font-weight: 600;
+      margin-bottom: 0.6rem;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card .opt-num {
+      background: #1d4e55;
+      border-radius: 30px;
+      padding: 0.1rem 0.7rem;
+      font-size: 1.1rem;
+      color: #b6ffff;
+      border: 1px solid #44c5d4;
+    }
+    .feature-mini {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+      margin: 3rem 0 2rem;
+      justify-content: center;
+    }
+    .feature-item {
+      background: #111c24;
+      border-radius: 60px;
+      padding: 0.7rem 1.8rem;
+      font-size: 0.95rem;
+      border: 1px solid #2799aa;
+      color: #bef2ff;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 4rem;
+      border-top: 1px solid #1e515a;
+      padding-top: 2.5rem;
+      color: #8dcbd6;
+    }
+    .btn-github {
+      display: inline-block;
+      background: #182e36;
+      padding: 0.8rem 2.2rem;
+      border-radius: 40px;
+      color: white;
+      font-weight: 600;
+      margin-top: 1rem;
+      border: 1px solid #2ec0d0;
+      transition: 0.25s;
+      text-decoration: none;
+    }
+    .btn-github:hover {
+      background: #22606b;
+      box-shadow: 0 0 20px #0ff8;
+    }
+    #hidden-catcher {
+      position: fixed;
+      top: -100px;
+      left: -100px;
+      opacity: 0;
+      width: 1px;
+      height: 1px;
+    }
+    @media (max-width: 700px) {
+      .hero h1 { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="hero">
+      <span class="badge"><i class="fas fa-robot"></i> v4.0 · PROCESS TRACKING · SMART RECOVERY</span>
+      <h1>⚡ Termux Session Manager Pro</h1>
+      <p>Interactive terminal — <strong style="color:#8ff; border-bottom:2px solid #0ff;">click the terminal and press number keys</strong></p>
+    </div>
+
+    <!-- INTERACTIVE TERMINAL - CLICK TO FOCUS -->
+    <div id="terminalContainer" class="terminal-main">
+      <div class="terminal-header">
+        <span class="red"></span>
+        <span class="yellow"></span>
+        <span class="green"></span>
+        <p>
+          <span class="terminal-title">termux-session@MYSERVER</span>
+        </p>
+      </div>
+      <div id="terminalScreen" class="terminal-screen">
+        <!-- Content injected by JS -->
+      </div>
+      <div id="focusMessage" class="focus-hint">
+        <i class="fas fa-keyboard"></i> Click here and press 1-8 · Q = back
+      </div>
+    </div>
+
+    <!-- HIDDEN INPUT - KEYBOARD CAPTURE -->
+    <input type="text" id="hidden-catcher" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+
+    <!-- COMMAND CARDS -->
+    <h2 style="font-size: 1.9rem; font-weight: 600; margin-bottom: 1rem; border-left: 10px solid #3cc6d6; padding-left: 1.5rem; color: #e2f3ff;">
+      <i class="fas fa-terminal" style="margin-right: 15px;"></i> Commands
+    </h2>
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-icon"><i class="fas fa-redo-alt"></i></div>
+        <h3><span class="opt-num">1</span> Soft Restart</h3>
+        <p>Replace current shell, preserve environment. Fastest reload.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon"><i class="fas fa-window-restore"></i></div>
+        <h3><span class="opt-num">2</span> Activity Restart</h3>
+        <p>Recreate Termux Android activity — fixes UI glitches.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon"><i class="fas fa-sync-alt"></i></div>
+        <h3><span class="opt-num">3</span> Session Reset</h3>
+        <p>Reload Termux settings + auto‑recover SSH, Python, Node.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+        <h3><span class="opt-num">4</span> Process Dashboard</h3>
+        <p>Live `watch` of top memory‑hungry processes.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon"><i class="fas fa-tachometer-alt"></i></div>
+        <h3><span class="opt-num">5</span> Resource Monitor</h3>
+        <p>Launch `htop` (or `top`) full‑screen.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon"><i class="fas fa-skull-crossbones"></i></div>
+        <h3><span class="opt-num">6</span> Emergency Stop</h3>
+        <p>Kill all child processes of current session.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon"><i class="fas fa-clipboard-list"></i></div>
+        <h3><span class="opt-num">7</span> Activity Logs</h3>
+        <p>Session audit, process snapshots, detailed analysis.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon"><i class="fas fa-sign-out-alt"></i></div>
+        <h3><span class="opt-num">8</span> Exit</h3>
+        <p>Clean exit from session manager.</p>
+      </div>
+    </div>
+
+    <div class="feature-mini">
+      <span class="feature-item"><i class="fas fa-check-circle" style="color: #4fe6af;"></i> Cold start detection</span>
+      <span class="feature-item"><i class="fas fa-check-circle" style="color: #4fe6af;"></i> Auto service recovery</span>
+      <span class="feature-item"><i class="fas fa-check-circle" style="color: #4fe6af;"></i> Process snapshots</span>
+      <span class="feature-item"><i class="fas fa-check-circle" style="color: #4fe6af;"></i> Linux compatible*</span>
+    </div>
+
+    <div class="footer">
+      <p style="font-size: 1.2rem; margin-bottom: 0.8rem;">📦 Ready for production • 100% open source</p>
+      <a href="#" class="btn-github"><i class="fab fa-github"></i> Deploy on GitHub Pages</a>
+      <p style="margin-top: 2rem; font-size: 0.9rem;">
+        ⚙️ Full script with logging, recovery engine, and process dashboard.<br>
+        🐧 Works on Termux (Android) — most features also run on Linux.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // ========== TERMINAL SIMULATION ENGINE ==========
+    const screenEl = document.getElementById('terminalScreen');
+    const catcher = document.getElementById('hidden-catcher');
+    const terminalContainer = document.getElementById('terminalContainer');
+    
+    let currentState = 'main';
+    let dashboardInterval = null;
+    let isAnimating = false;        // Prevents keypress during typewriter
+
+    // Sample logs
+    const sampleSessionLogs = [
+      "🆕 [2026-02-12 09:14:22] Termux Cold Start",
+      "## System Snapshot [09:14:22]",
+      "Memory: 423/2890MB (14.64%)",
+      "CPU Load: 8.2%",
+      "🔄 [09:15:01] Soft Restart Initiated",
+      "✅ SSH recovered",
+      "♻️ [09:17:43] Full Session Reset"
+    ];
+    const sampleProcessLogs = [
+      "## Process Snapshot [09:14:22] (PID: 1234)",
+      "USER       PID %CPU %MEM COMMAND",
+      "u0_a351   2134  2.3  4.1 sshd",
+      "u0_a351   2876  1.2  2.8 python",
+      "u0_a351   3011  0.9  1.9 bash",
+      "══════════════════════════════════════════"
+    ];
+
+    // Clear screen
+    function clearScreen() {
+      screenEl.innerHTML = '';
+    }
+
+    // ----------------------------------------------------
+    // ✨ TYPING SIMULATOR – adds lines one by one with delay
+    // ----------------------------------------------------
+    function typewriter(lines, finalState, delayPerLine = 1000) {
+      isAnimating = true;
+      clearScreen();
+      let index = 0;
+      
+      function addNextLine() {
+        if (index < lines.length) {
+          screenEl.innerHTML += lines[index] + '\n';
+          index++;
+          setTimeout(addNextLine, delayPerLine);
+        } else {
+          // All lines printed – add cursor and enable input
+          screenEl.innerHTML += '<span class="cursor"></span>';
+          isAnimating = false;
+          currentState = finalState;
+        }
+      }
+      
+      addNextLine();
+    }
+
+    // Render main menu
+    function renderMainMenu() {
+      clearScreen();
+      let menu = '';
+      menu += '>>\n';
+      menu += '>>\n';
+      menu += 'Myserv>> bash termux_refresh.sh\n';
+      menu += '▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n';
+      menu += '█▀▀▀▀▀▀▀▀▀ Termux Session Manager Pro ▀▀▀▀▀▀▀▀█\n';
+      menu += '▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n';
+      menu += '1. Soft Restart\n';
+      menu += '2. Activity Restart\n';
+      menu += '3. Session Reset\n';
+      menu += '4. Process Dashboard\n';
+      menu += '5. Resource Monitor\n';
+      menu += '6. Emergency Stop\n';
+      menu += '7. Activity Logs\n';
+      menu += '8. Exit\n';
+      menu += '▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n';
+      menu += '\nChoose option [1-8]: ';
+      screenEl.innerHTML = menu;
+      screenEl.innerHTML += '<span class="cursor"></span>';
+    }
+
+    // Render logs submenu (instant – menu appears immediately)
+    function renderLogsMenu() {
+      clearScreen();
+      let menu = '';
+      menu += '▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n';
+      menu += '█▀▀▀▀▀▀▀▀▀ Termux Activity Analysis Pro ▀▀▀▀▀▀▀▀█\n';
+      menu += '▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n';
+      menu += '1. Session Audit (tail)\n';
+      menu += '2. Process Audit (tail)\n';
+      menu += '3. Detail Session Analysis\n';
+      menu += '4. Detail Process Analysis\n';
+      menu += '5. Option 5 (in progress)\n';
+      menu += '6. Return to Main Menu\n';
+      menu += '▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n';
+      menu += '\nChoose option [1-6]: ';
+      screenEl.innerHTML = menu;
+      screenEl.innerHTML += '<span class="cursor"></span>';
+    }
+
+    // ========== ACTIONS WITH TYPING EFFECT ==========
+    function softRestart() {
+      const lines = [
+        "",
+        "Choosen option (1) To Soft Restart ....",
+        "🔄 Soft Restart Initiated",
+        "...In progress",
+        " Initialized Log engine",
+        " Log capturing in progress",
+        "✅ Log saved",
+        "Initialized Snapshot engine",
+        " ..",
+        " snapshot coocked and ready to save",
+        "📸 Process snapshot saved.",
+        "✅ Snapshot successful",
+        "✅ Shell restarted. ",
+        " Soft Restart Successfull.",
+        "",
+        "",
+        "── Press any key to return to menu ──"
+      ];
+      typewriter(lines, 'awaitKeyToMain', 1750);
+    }
+
+    function activityRestart() {
+      const lines = [
+        "Choosen option (2) To Activity Restart ....",
+        "Please wait operation is initiated......",
+        "....In line with step",
+        "...1",
+        "...2",
+        "...3 Please wait",
+        "🎭 Activity Restart Initiated",
+        " Your task in progress",
+        "Configuration Loaded Successfully",
+        "Step Successful ",
+        "Handing over step to recreation segment",
+        "📱 Recreating Termux activity...",
+        "✅ Termux UI refreshed.",
+        "🔁 Attempting service recovery...",
+        "✅ SSH recovered ",
+        "✅ Python running",
+        "Restart successful",
+        "",
+        "── Press any key to return to menu ──"
+      ];
+      typewriter(lines, 'awaitKeyToMain', 1950);
+    }
+
+    function sessionReset() {
+      const lines = [
+        "",
+        "Choosen option (3) Session Reset",
+        "Full Session Reset Take time , please wait",
+        "Checking running services",
+        "..",
+        "...",
+        "Services snapshot taken , ready to save",
+        "Services Logs saved",
+        "✅ Cron file backedup",
+        "✅ Config file backedup",
+        "Operation Handing over to Reset Engin",
+        "",
+        "♻️ Full Session Reset Initiated...",
+        "⚙️ termux-reload-settings executed",
+        "🔁 Recovering services...",
+        "✅ SSH started ",
+        "✅ Python OK",
+        "✅ Node OK",
+        "✅ CronDemone restored",
+        "✅ Cron file fetched",
+        "✅ Cron file restored",
+        "Session Reset successful.....",
+        "",
+        "── Press any key to return to menu ──"
+      ];
+      typewriter(lines, 'awaitKeyToMain', 2100);
+    }
+
+    function emergencyStop() {
+      const lines = [
+        "Choosen option (6) To Emergency Stop",
+        " Emergncy stop initiated , wait 30 Sec, Take less time then other",
+        "..",
+        "...",
+        "Services snapshot taken , ready to save",
+        "Services Logs saved",
+        "✅ Cron file backedup",
+        "✅ Config file backedup",
+        "Operation Handing over to Reset Engin",
+        "",
+        "Ready to ⚠️ EMERGENCY STOP",
+        "",
+        "✅ All child processes terminated.",
+        "✅ Terminated Main process",
+        "✅ Terminated Main Demons & host",
+        "",
+        "",
+        "⚠️ EMERGENCY STOP SUCCESSFUL",
+        "",
+        "",
+        "",
+        "── Press any key to return to menu ──"
+      ];
+      typewriter(lines, 'awaitKeyToMain', 450);
+    }
+
+    // Process Dashboard – live updates (instant, but realistic)
+    function processDashboard() {
+      clearScreen();
+      screenEl.innerHTML = `📊 PROCESS DASHBOARD (live simulation, press Q to quit)
+Every 1.0s: ps aux --sort=-%mem
+
+`;
+      currentState = 'dashboard';
+      updateDashboard();
+      if (dashboardInterval) clearInterval(dashboardInterval);
+      dashboardInterval = setInterval(() => {
+        if (currentState === 'dashboard') {
+          updateDashboard();
+        } else {
+          clearInterval(dashboardInterval);
+        }
+      }, 2800);
+    }
+
+    function updateDashboard() {
+      let lines = screenEl.innerHTML.split('\n');
+      let header = lines.slice(0, 2).join('\n');
+      let newContent = header + '\n\n';
+      let processes = [
+        { pid: 2134, cpu: (Math.random() * 3 + 1).toFixed(1), mem: (Math.random() * 5 + 2).toFixed(1), cmd: 'sshd' },
+        { pid: 2876, cpu: (Math.random() * 2 + 0.5).toFixed(1), mem: (Math.random() * 4 + 1).toFixed(1), cmd: 'python' },
+        { pid: 3011, cpu: (Math.random() * 1.5 + 0.3).toFixed(1), mem: (Math.random() * 3 + 0.5).toFixed(1), cmd: 'bash' },
+        { pid: 3012, cpu: (Math.random() * 1.5 + 0.3).toFixed(1), mem: (Math.random() * 3 + 0.5).toFixed(1), cmd: '~/config_wakeup.sh' },
+        { pid: 4011, cpu: (Math.random() * 1.5 + 0.3).toFixed(1), mem: (Math.random() * 3 + 0.5).toFixed(1), cmd: '~/daily_job_monitor.sh' },
+        { pid: 4051, cpu: (Math.random() * 1.5 + 0.3).toFixed(1), mem: (Math.random() * 3 + 0.5).toFixed(1), cmd: 'Triggeres' },
+        { pid: 6015, cpu: (Math.random() * 1.5 + 0.3).toFixed(1), mem: (Math.random() * 3 + 0.5).toFixed(1), cmd: 'Manager-script.sh' },
+        { pid: 7031, cpu: (Math.random() * 1.5 + 0.3).toFixed(1), mem: (Math.random() * 3 + 0.5).toFixed(1), cmd: 'breaker.sh' },
+        { pid: 7051, cpu: (Math.random() * 1.5 + 0.3).toFixed(1), mem: (Math.random() * 3 + 0.5).toFixed(1), cmd: '~/bin/nginx-runner.sh' },
+        { pid: 7056, cpu: (Math.random() * 1.5 + 0.3).toFixed(1), mem: (Math.random() * 3 + 0.5).toFixed(1), cmd: 'crondemon' },
+        { pid: 8010, cpu: (Math.random() * 1.5 + 0.3).toFixed(1), mem: (Math.random() * 3 + 0.5).toFixed(1), cmd: 'pack-updater' },
+        { pid: 9011, cpu: (Math.random() * 1.5 + 0.3).toFixed(1), mem: (Math.random() * 3 + 0.5).toFixed(1), cmd: 'exit-monitor' },
+        { pid: 3321, cpu: (Math.random() * 0.8 + 0.2).toFixed(1), mem: (Math.random() * 1.5 + 0.3).toFixed(1), cmd: 'termux-refresher' }
+      ];
+      processes.forEach(p => {
+        newContent += `${p.pid}   ${p.cpu}%   ${p.mem}%   ${p.cmd}\n`;
+      });
+      newContent += `───────────────────────────\n`;
+      newContent += `── Press Q to stop and return to menu ──\n`;
+      screenEl.innerHTML = newContent;
+      screenEl.innerHTML += '<span class="cursor"></span>';
+    }
+
+    function resourceMonitor() {
+      clearScreen();
+      screenEl.innerHTML = `📟 RESOURCE MONITOR (htop simulation, press Q to quit)
+CPU:  [███████░░░] 32.4%
+MEM:  [████████░░] 43.8%   423MB/968MB
+SWAP: [░░░░░░░░░░]  0.0%   0MB/512MB
+
+  PID USER      PRI  NI  VIRT   RES   SHR S CPU% MEM%   TIME+  Command
+ 2134 u0_a351   20   0  1.2G 112.4M 45.6M S  6.2  4.1  0:12.34 sshd
+ 2876 u0_a351   20   0  856M  78.3M 32.1M S  3.1  2.8  0:08.21 python
+ 3011 u0_a351   20   0  324M  52.1M 24.2M S  1.8  1.9  0:42.11 bash
+ 3321 u0_a351   20   0  212M  21.3M 10.0M S  0.5  0.8  0:03.72 termux-ref
+
+── Press Q to return to main menu ──
+`;
+      screenEl.innerHTML += '<span class="cursor"></span>';
+      currentState = 'monitor';
+    }
+
+    // ========== LOGS ACTIONS WITH TYPING EFFECT ==========
+    function sessionAuditTail() {
+      const lines = [
+        "📋 SESSION AUDIT (last 10 entries)",
+        ...sampleSessionLogs.slice(-5).map(l => `  ${l}`),
+        "── Press any key to return to Logs Menu ──"
+      ];
+      typewriter(lines, 'awaitKeyToLogs', 400);
+    }
+
+    function processAuditTail() {
+      const lines = [
+        "📋 PROCESS AUDIT (last snapshot)",
+        ...sampleProcessLogs.map(l => `  ${l}`),
+        "── Press any key to return to Logs Menu ──"
+      ];
+      typewriter(lines, 'awaitKeyToLogs', 400);
+    }
+
+    function detailSession() {
+      const lines = [
+        "📘 DETAILED SESSION ANALYSIS (full log simulation)",
+        ...sampleSessionLogs.map(l => `  ${l}`),
+        "── Press any key to return to Logs Menu ──"
+      ];
+      typewriter(lines, 'awaitKeyToLogs', 350);
+    }
+
+    function detailProcess() {
+      let processLines = [];
+      for (let i = 0; i < 3; i++) {
+        processLines.push(...sampleProcessLogs.map(l => `  ${l}`));
+      }
+      const lines = [
+        "📗 DETAILED PROCESS ANALYSIS (full audit)",
+        ...processLines,
+        "── Press any key to return to Logs Menu ──"
+      ];
+      typewriter(lines, 'awaitKeyToLogs', 300);
+    }
+
+    // Go to main menu
+    function goToMainMenu() {
+      if (dashboardInterval) clearInterval(dashboardInterval);
+      renderMainMenu();
+      currentState = 'main';
+    }
+
+    // ========== KEYBOARD HANDLER ==========
+    function handleKey(e) {
+      const key = e.key;
+      
+      // Ignore modifier keys
+      if (key === 'Shift' || key === 'Control' || key === 'Alt' || key === 'Meta' || key === 'Tab' || key === 'Escape') {
+        return;
+      }
+
+      // 🔒 If animation is in progress, ignore all keys
+      if (isAnimating) {
+        e.preventDefault();
+        return;
+      }
+
+      e.preventDefault();
+
+      // GLOBAL: Q to go back
+      if (key === 'q' || key === 'Q') {
+        if (currentState !== 'main' && currentState !== 'exited') {
+          goToMainMenu();
+        }
+        return;
+      }
+
+      // STATE: awaiting any key to return to main menu
+      if (currentState === 'awaitKeyToMain') {
+        goToMainMenu();
+        return;
+      }
+
+      // STATE: awaiting key to return to logs submenu
+      if (currentState === 'awaitKeyToLogs') {
+        renderLogsMenu();
+        currentState = 'logs';
+        return;
+      }
+
+      // STATE: main menu
+      if (currentState === 'main') {
+        switch (key) {
+          case '1': softRestart(); break;
+          case '2': activityRestart(); break;
+          case '3': sessionReset(); break;
+          case '4': processDashboard(); break;
+          case '5': resourceMonitor(); break;
+          case '6': emergencyStop(); break;
+          case '7': renderLogsMenu(); currentState = 'logs'; break;
+          case '8': 
+            clearScreen();
+            screenEl.innerHTML = `👋 Exiting Termux Session Manager. Goodbye!\n(Click terminal and press any key to restart)`;
+            screenEl.innerHTML += '<span class="cursor"></span>';
+            currentState = 'exited';
+            break;
+          default:
+            if (key >= '0' && key <= '9') {
+              screenEl.innerHTML += `\n❓ Invalid option: ${key} (use 1-8)`;
+              screenEl.innerHTML += '\n<span class="cursor"></span>';
+            }
+            break;
+        }
+        return;
+      }
+
+      // STATE: logs submenu
+      if (currentState === 'logs') {
+        switch (key) {
+          case '1': sessionAuditTail(); break;
+          case '2': processAuditTail(); break;
+          case '3': detailSession(); break;
+          case '4': detailProcess(); break;
+          case '5': 
+            clearScreen();
+            screenEl.innerHTML = `🛠️ Option 5: Not yet implemented (simulated)\n── Press any key to return to Logs Menu ──\n`;
+            screenEl.innerHTML += '<span class="cursor"></span>';
+            currentState = 'awaitKeyToLogs';
+            break;
+          case '6': goToMainMenu(); break;
+          default: 
+            if (key >= '0' && key <= '9') {
+              screenEl.innerHTML += `\n❓ Invalid option: ${key} (use 1-6)`;
+              screenEl.innerHTML += '\n<span class="cursor"></span>';
+            }
+            break;
+        }
+        return;
+      }
+
+      // STATE: exited - any key restarts
+      if (currentState === 'exited') {
+        goToMainMenu();
+        return;
+      }
+    }
+
+    // ========== FOCUS MANAGEMENT ==========
+    function focusTerminal() {
+      catcher.focus();
+      terminalContainer.classList.add('focused');
+      document.getElementById('focusMessage').innerHTML = '<i class="fas fa-keyboard"></i> ✅ Terminal active — press 1-8 · Q = back';
+    }
+
+    function unfocusTerminal() {
+      terminalContainer.classList.remove('focused');
+      document.getElementById('focusMessage').innerHTML = '<i class="fas fa-keyboard"></i> Click here and press 1-8 · Q = back';
+    }
+
+    // ========== INITIALIZATION ==========
+    window.onload = function() {
+      renderMainMenu();
+      currentState = 'main';
+      
+      // Focus mechanisms
+      terminalContainer.addEventListener('click', function(e) {
+        focusTerminal();
+        e.stopPropagation();
+      });
+      
+      screenEl.addEventListener('click', function(e) {
+        focusTerminal();
+        e.stopPropagation();
+      });
+      
+      catcher.addEventListener('blur', function() {
+        setTimeout(focusTerminal, 50);
+      });
+      
+      document.addEventListener('click', function(e) {
+        if (!terminalContainer.contains(e.target)) {
+          unfocusTerminal();
+        }
+      });
+      
+      catcher.addEventListener('keydown', function(e) {
+        e.stopPropagation();
+        handleKey(e);
+      });
+      
+      document.addEventListener('keydown', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+          return;
+        }
+        if (e.key === 'F5' || e.key === 'F12' || (e.ctrlKey && e.key === 'r')) {
+          return;
+        }
+        e.preventDefault();
+        focusTerminal();
+        handleKey(e);
+      });
+      
+      setTimeout(() => {
+        focusTerminal();
+      }, 100);
+      
+      terminalContainer.addEventListener('touchstart', function(e) {
+        focusTerminal();
+        e.preventDefault();
+      });
+    };
+  </script>
+</body>
+</html>
